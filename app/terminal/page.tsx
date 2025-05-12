@@ -1,62 +1,66 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { TerminalIcon, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { motion } from "framer-motion"
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { TerminalIcon, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
 
 export default function TerminalPage() {
-  const [input, setInput] = useState("")
-  const [history, setHistory] = useState<{ type: "input" | "output"; content: string }[]>([
+  const [input, setInput] = useState("");
+  const [history, setHistory] = useState([
     { type: "output", content: "CyberQuest Terminal v1.0.3" },
     { type: "output", content: 'Type "help" for available commands.' },
     { type: "output", content: "> " },
-  ])
-  const [authenticated, setAuthenticated] = useState(false)
-  const [authAttempts, setAuthAttempts] = useState(0)
-  const terminalRef = useRef<HTMLDivElement>(null)
+  ]);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authAttempts, setAuthAttempts] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const terminalRef = useRef<HTMLDivElement>(null);
+
+  // Check localStorage for completed status
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const completed = localStorage.getItem("terminal_challenge_completed") === "true";
+      setIsCompleted(completed);
+    }
+  }, []);
 
   useEffect(() => {
     if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [history])
+  }, [history]);
 
   const handleCommand = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!input.trim()) return
+    if (!input.trim()) return;
 
-    // Add user input to history
-    setHistory([...history, { type: "input", content: input }])
-
-    // Process command
-    const command = input.trim().toLowerCase()
-    let response: string[] = []
+    const command = input.trim().toLowerCase();
+    const newHistory = [...history, { type: "input", content: input }];
+    let response: string[] = [];
 
     if (!authenticated) {
       if (command.startsWith("login")) {
-        const args = command.split(" ")
+        const args = command.split(" ");
         if (args.length === 3 && args[1] === "guest" && args[2] === "1n1t1@l") {
           response = [
             "Authentication successful.",
             "Welcome to the CyberQuest system.",
             'Type "scan" to begin network diagnostics.',
-          ]
-          setAuthenticated(true)
+          ];
+          setAuthenticated(true);
         } else {
-          setAuthAttempts((prev) => prev + 1)
+          setAuthAttempts((prev) => prev + 1);
           if (authAttempts >= 2) {
             response = [
               "Authentication failed.",
               "Hint: Check the page source of the homepage for initial credentials.",
-            ]
+            ];
           } else {
-            response = ["Authentication failed. Please try again."]
+            response = ["Authentication failed. Please try again."];
           }
         }
       } else if (command === "help") {
@@ -65,20 +69,19 @@ export default function TerminalPage() {
           "  login [username] [password] - Authenticate to the system",
           "  help - Display this help message",
           "  clear - Clear the terminal",
-        ]
+        ];
       } else if (command === "clear") {
         setHistory([
           { type: "output", content: "CyberQuest Terminal v1.0.3" },
           { type: "output", content: 'Type "help" for available commands.' },
           { type: "output", content: "> " },
-        ])
-        setInput("")
-        return
+        ]);
+        setInput("");
+        return;
       } else {
-        response = ['Authentication required. Use "login [username] [password]" to proceed.']
+        response = ['Authentication required. Use "login [username] [password]" to proceed.'];
       }
     } else {
-      // Authenticated commands
       if (command === "help") {
         response = [
           "Available commands:",
@@ -89,54 +92,51 @@ export default function TerminalPage() {
           "  help - Display this help message",
           "  clear - Clear the terminal",
           "  logout - End current session",
-        ]
+        ];
       } else if (command === "scan") {
         response = [
           "Scanning network...",
           "Suspicious activity detected on port 2222.",
           "Possible intrusion point identified.",
           'Use "connect 10.0.14.92 2222" to investigate.',
-        ]
+        ];
       } else if (command.startsWith("connect")) {
-        const args = command.split(" ")
+        const args = command.split(" ");
         if (args.length === 3 && args[1] === "10.0.14.92" && args[2] === "2222") {
           response = [
             "Connecting to 10.0.14.92:2222...",
             "Connection established.",
             "Remote system requires binary authentication.",
             "Proceed to /binary-challenge to continue.",
-          ]
-          // Save progress
-          localStorage.setItem("terminal_challenge_completed", "true")
+          ];
+          localStorage.setItem("terminal_challenge_completed", "true");
+          setIsCompleted(true);
         } else {
-          response = ["Connection failed. Check IP and port."]
+          response = ["Connection failed. Check IP and port."];
         }
       } else if (command === "clear") {
         setHistory([
           { type: "output", content: "CyberQuest Terminal v1.0.3" },
           { type: "output", content: 'Type "help" for available commands.' },
           { type: "output", content: "> " },
-        ])
-        setInput("")
-        return
+        ]);
+        setInput("");
+        return;
       } else if (command === "logout") {
-        response = ["Logging out...", "Session terminated."]
-        setAuthenticated(false)
+        response = ["Logging out...", "Session terminated."];
+        setAuthenticated(false);
       } else {
-        response = ['Command not recognized. Type "help" for available commands.']
+        response = ['Command not recognized. Type "help" for available commands.'];
       }
     }
 
-    // Add response to history
-    const newHistory = [...history, { type: "input", content: input }]
-    response.forEach((line) => {
-      newHistory.push({ type: "output", content: line })
-    })
-    newHistory.push({ type: "output", content: "> " })
+    // Update history with responses
+    response.forEach((line) => newHistory.push({ type: "output", content: line }));
+    newHistory.push({ type: "output", content: "> " });
 
-    setHistory(newHistory)
-    setInput("")
-  }
+    setHistory(newHistory);
+    setInput("");
+  };
 
   return (
     <div className="min-h-screen bg-black text-green-400 font-mono p-4">
@@ -152,13 +152,10 @@ export default function TerminalPage() {
         </header>
 
         <main>
-          <div
-            ref={terminalRef}
-            className="bg-black border border-green-800 rounded-md p-4 h-[70vh] overflow-y-auto mb-4 font-mono text-sm"
-          >
+          <div ref={terminalRef} className="bg-black border border-green-800 rounded-md p-4 h-[70vh] overflow-y-auto mb-4 font-mono text-sm">
             {history.map((entry, index) => (
-              <div key={index} className={`${entry.type === "input" ? "text-white" : "text-green-400"}`}>
-                {entry.type === "input" ? "> " + entry.content : entry.content}
+              <div key={index} className={entry.type === "input" ? "text-white" : "text-green-400"}>
+                {entry.content}
               </div>
             ))}
           </div>
@@ -177,7 +174,7 @@ export default function TerminalPage() {
             </Button>
           </form>
 
-          {localStorage.getItem("terminal_challenge_completed") === "true" && (
+          {isCompleted && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -197,6 +194,5 @@ export default function TerminalPage() {
         </main>
       </div>
     </div>
-  )
+  );
 }
-
